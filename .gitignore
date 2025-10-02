@@ -1,0 +1,6 @@
+# Docker volumes / cache
+ollama_data/
+*.log
+
+# System files
+.DS_Store

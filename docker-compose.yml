@@ -4,6 +4,10 @@ services:
     image: ollama/ollama:latest
     container_name: ollama
     restart: unless-stopped
+    # Requires NVIDIA drivers and nvidia-container-toolkit installed on the host
+    # See README.md for setup steps on Ubuntu 24.04
+    deploy: {}
+    gpus: all
     ports:
       - "11434:11434"
     environment:

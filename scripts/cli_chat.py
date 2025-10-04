@@ -49,10 +49,19 @@ def stream_response(resp, messages):
     """
     assistant_buf = []
     try:
-        for raw in resp.iter_lines(decode_unicode=True):
+        for raw in resp.iter_lines(decode_unicode=False):
+            # raw may be bytes or a str depending on the response/requests version
             if not raw:
                 continue
-            line = raw.strip()
+            if isinstance(raw, bytes):
+                try:
+                    line = raw.decode('utf-8')
+                except Exception:
+                    line = raw.decode('utf-8', errors='replace')
+            else:
+                line = str(raw)
+
+            line = line.strip()
             # Some servers may prefix with data: or similar; try to strip
             if line.startswith('data:'):
                 line = line[len('data:'):].strip()

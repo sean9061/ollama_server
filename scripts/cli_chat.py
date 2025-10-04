@@ -39,6 +39,116 @@ def post_chat(host: str, payload: dict, stream: bool = True):
         return None
 
 
+def list_local_models(host: str):
+    """Return a list of local model names by calling /tags."""
+    url = host.rstrip('/') + '/tags'
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        models = [m.get('name') for m in data.get('models', []) if 'name' in m]
+        return models
+    except RequestException as e:
+        print(f"Failed to list local models: {e}")
+        return []
+
+
+def resolve_model(host: str, requested_model: str, interactive: bool = True):
+    """Resolve a requested model name against local models.
+
+    Matching strategy (in order):
+    - exact equality
+    - requested + ':latest'
+    - match by base name before ':'
+    - startswith
+    - contains
+
+    If multiple candidates found and interactive, prompt the user to choose.
+    Returns the chosen model name or None.
+    """
+    local = list_local_models(host)
+    if not local:
+        return None
+
+    # Exact match
+    if requested_model in local:
+        return requested_model
+
+    # requested + :latest
+    candidate = requested_model + ':latest'
+    if candidate in local:
+        return candidate
+
+    # Match base names (before colon)
+    base_matches = [m for m in local if m.split(':', 1)[0] == requested_model]
+    if len(base_matches) == 1:
+        return base_matches[0]
+    if len(base_matches) > 1 and interactive:
+        print(f"Multiple models match base name '{requested_model}':")
+        for i, m in enumerate(base_matches, 1):
+            print(f"  {i}. {m}")
+        sel = input('Choose number (or press Enter to cancel): ').strip()
+        if sel.isdigit() and 1 <= int(sel) <= len(base_matches):
+            return base_matches[int(sel)-1]
+        return None
+
+    # startswith
+    starts = [m for m in local if m.startswith(requested_model)]
+    if len(starts) == 1:
+        return starts[0]
+    if len(starts) > 1 and interactive:
+        print(f"Multiple models start with '{requested_model}':")
+        for i, m in enumerate(starts, 1):
+            print(f"  {i}. {m}")
+        sel = input('Choose number (or press Enter to cancel): ').strip()
+        if sel.isdigit() and 1 <= int(sel) <= len(starts):
+            return starts[int(sel)-1]
+        return None
+
+    # contains
+    contains = [m for m in local if requested_model in m]
+    if len(contains) == 1:
+        return contains[0]
+    if len(contains) > 1 and interactive:
+        print(f"Multiple models contain '{requested_model}':")
+        for i, m in enumerate(contains, 1):
+            print(f"  {i}. {m}")
+        sel = input('Choose number (or press Enter to cancel): ').strip()
+        if sel.isdigit() and 1 <= int(sel) <= len(contains):
+            return contains[int(sel)-1]
+        return None
+
+    return None
+
+
+def pull_model(host: str, model: str):
+    """Call /api/pull to download a model. Returns True on success."""
+    url = host.rstrip('/') + '/pull'
+    payload = {'model': model}
+    try:
+        # Use streaming to show progress
+        resp = requests.post(url, json=payload, stream=True, timeout=3600)
+        resp.raise_for_status()
+        # Stream output lines
+        for raw in resp.iter_lines(decode_unicode=True):
+            if not raw:
+                continue
+            line = raw.strip()
+            try:
+                obj = json.loads(line)
+                # Print status messages if present
+                if isinstance(obj, dict) and 'status' in obj:
+                    print(obj['status'])
+                else:
+                    print(line)
+            except Exception:
+                print(line)
+        return True
+    except RequestException as e:
+        print(f"Failed to pull model: {e}")
+        return False
+
+
 def stream_response(resp, messages):
     """Consume a streaming response from the Ollama server.
 
@@ -135,7 +245,36 @@ def interactive(host: str, model: str, stream: bool):
         if text == '/help':
             print('/reset - clear conversation history')
             print('/exit  - quit')
+            print('/model <name> - switch to a different model (will pull if not available)')
             print('/help  - show this help')
+            continue
+
+        # Model change command: /model <name>
+        if text.startswith('/model'):
+            parts = text.split(None, 1)
+            if len(parts) == 1 or not parts[1].strip():
+                print('Usage: /model <model-name>')
+                continue
+            new_model = parts[1].strip()
+            # Check local models
+            local = list_local_models(host)
+            if new_model in local:
+                model = new_model
+                messages = []
+                print(f"Switched to model: {model}")
+                continue
+            print(f"Model '{new_model}' not found locally.")
+            choice = input('Pull it now? [y/N]: ').strip().lower()
+            if choice == 'y' or choice == 'yes':
+                ok = pull_model(host, new_model)
+                if ok:
+                    model = new_model
+                    messages = []
+                    print(f"Model pulled and switched to: {model}")
+                else:
+                    print('Pull failed; model not switched.')
+            else:
+                print('Model not pulled.')
             continue
 
         if text == '/reset':
@@ -176,8 +315,25 @@ def main():
     parser.add_argument('--no-stream', action='store_true', help='Disable streaming and receive single response')
     args = parser.parse_args()
 
+    # Resolve requested model against local models. If not present, offer to pull.
+    resolved = resolve_model(args.host, args.model, interactive=True)
+    model_to_use = args.model
+    if resolved:
+        model_to_use = resolved
+    else:
+        print(f"Model '{args.model}' not found locally.")
+        choice = input('Pull it now? [y/N]: ').strip().lower()
+        if choice in ('y', 'yes'):
+            ok = pull_model(args.host, args.model)
+            if ok:
+                model_to_use = args.model
+            else:
+                print('Pull failed; starting with requested model name (may error).')
+        else:
+            print('Continuing without pulling; the server may reject requests for this model.')
+
     try:
-        interactive(args.host, args.model, stream=not args.no_stream)
+        interactive(args.host, model_to_use, stream=not args.no_stream)
     except Exception as e:
         print(f'Fatal error: {e}', file=sys.stderr)
         sys.exit(1)

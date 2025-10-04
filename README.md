@@ -16,11 +16,13 @@ docker compose up -d
 # モデルを取得
 docker exec -it ollama ollama pull llama3
 
+```
+
 ## GPU を使うための追加手順 (Ubuntu 24.04)
 
 このリポジトリでは `docker-compose.yml` で `gpus: all` を設定しています。ホスト側で NVIDIA ドライバと `nvidia-container-toolkit` を正しくインストールすることで、コンテナから GPU が使えるようになります。以下は最低限の手順です。
 
-1. NVIDIA ドライバをインストールします（GTX 1660 Super に合ったドライバ）。Ubuntu のドライバ管理や `apt` を使います。例:
+1. NVIDIA ドライバをインストールします。Ubuntu のドライバ管理や `apt` を使います。例:
 
 ```bash
 # 更新
@@ -72,7 +74,7 @@ docker compose up -d
 docker exec -it ollama bash -lc "nvidia-smi || echo 'nvidia-smi not available in container'"
 ```
 
-注意: 一部の古い GPU やドライバでは、Ollama が必要とする CUDA/driver バージョンと合わない場合があります。GTX 1660 Super は比較的新しいカードなので通常は動作しますが、ドライバのバージョンに注意してください。
+注意: 一部の古い GPU やドライバでは、Ollama が必要とする CUDA/driver バージョンと合わない場合があります。ドライバのバージョンに注意してください。
 
 ## トラブルシューティング
 

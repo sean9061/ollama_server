@@ -4,3 +4,6 @@ ollama_data/
 
 # System files
 .DS_Store
+
+.venv/
+__pycache__/

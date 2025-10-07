@@ -1,3 +1,6 @@
+## ちょっとまだ雑だからそんなにじっくり見られると困っちゃう…。
+もうちょい待ってほしいっぴ
+
 # 🦙 Local LLM Server (Ollama + Nginx + Docker)
 
 このリポジトリは、Docker Compose で **Ollama LLM サーバー** を立ち上げるテンプレートです。  

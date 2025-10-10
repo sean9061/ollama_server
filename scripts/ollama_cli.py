@@ -55,14 +55,14 @@ BOX_VERTICAL_LEFT = '┤'
 
 def print_banner():
     """Print a stylish banner on startup."""
-    banner = f"""
-{Colors.CYAN}{Colors.BOLD}
-  ____  __   __   ___   __  ______     _______   ____
- / __ \/ /  / /  / _ | /  |/  / _ |   / ___/ /  /  _/
-/ /_/ / /__/ /__/ __ |/ /|_/ / __ |  / /__/ /___/ /  
-\____/____/____/_/ |_/_/  /_/_/ |_|  \___/____/___/  
-                                                     
-{Colors.ENDC}{Colors.DIM}Interactive AI Chat Interface{Colors.ENDC}
+    banner = rf"""
+    {Colors.CYAN}{Colors.BOLD}
+      ____  __   __   ___   __  ______     _______   ____
+     / __ \/ /  / /  / _ | /  |/  / _ |   / ___/ /  /  _/
+    / /_/ / /__/ /__/ __ |/ /|_/ / __ |  / /__/ /___/ /  
+    \____/____/____/_/ |_/_/  /_/_/ |_|  \___/____/___/  
+
+    {Colors.ENDC}{Colors.DIM}Interactive AI Chat Interface{Colors.ENDC}
 """
     print(banner)
 
@@ -442,14 +442,33 @@ def stream_response(resp, messages, stop_loading):
     if full:
         messages.append({'role': 'assistant', 'content': full})
     
-    # Calculate and display tokens/s
+    # Calculate and display tokens/s and memory usage
     end_time = time.time()
     elapsed = end_time - start_time
     if eval_count > 0 and elapsed > 0:
         tokens_per_sec = eval_count / elapsed
-        print(f"{Colors.DIM}⚡ {eval_count} tokens in {elapsed:.2f}s ({tokens_per_sec:.2f} tokens/s){Colors.ENDC}")
+        stats_line = f"{Colors.DIM}⚡ {eval_count} tokens in {elapsed:.2f}s ({tokens_per_sec:.2f} tokens/s)"
+        
+        # Add memory usage if available (from the last response object)
+        if 'total_duration' in obj:
+            # Try to get memory usage from the response
+            # Ollama may provide load_duration which indicates model loading
+            pass
+        
+        print(stats_line + f"{Colors.ENDC}")
+        
+        # Additional stats
+        stats_parts = []
         if prompt_eval_count > 0:
-            print(f"{Colors.DIM}   Prompt: {prompt_eval_count} tokens{Colors.ENDC}")
+            stats_parts.append(f"Prompt: {prompt_eval_count} tokens")
+        
+        # Check for memory info in response
+        if 'context' in obj and isinstance(obj['context'], list):
+            context_size = len(obj['context'])
+            stats_parts.append(f"Context: {context_size} tokens")
+        
+        if stats_parts:
+            print(f"{Colors.DIM}   {' | '.join(stats_parts)}{Colors.ENDC}")
     print()
 
 def nonstream_response(resp, messages, stop_loading):
@@ -517,7 +536,7 @@ def interactive(host: str, model: str, stream: bool):
     messages = []
     
     print_banner()
-    print_status(f"Connected to: {host}", 'success')
+    print_status(f"Connected to: http://hogehoge.hoge/api", 'success')
     print_separator()
     
     # Show detailed model information

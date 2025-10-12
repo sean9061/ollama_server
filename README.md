@@ -6,6 +6,7 @@
 [![Ollama](https://img.shields.io/badge/Ollama-lightgrey)](https://ollama.com)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Profile views](https://komarev.com/ghpvc/?username=ollama_server01&color=43c6ac&style=flat)
 
 **Ollama Server** は、Docker Compose を利用して、ローカル環境に大規模言語モデル（LLM）の実行環境を迅速に構築するためのプロジェクトです。Nginx をリバースプロキシとして配置し、安全かつ効率的に Ollama API へアクセスできます。さらに、リッチな表示と対話機能を備えたコマンドラインインターフェース（CLI）クライアントも同梱しています。
 
